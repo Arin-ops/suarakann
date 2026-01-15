@@ -3128,22 +3128,370 @@
             }
         });
     </script>
-    // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+    <!-- TAMBAHKAN INI SEBELUM </body> -->
+<script>
+// ==================== SISTEM DATABASE SEDERHANA ====================
+const DB_KEY = 'suaraosis_data_v3';
+const STATS_KEY = 'suaraosis_stats_v3';
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCvRGQ-DKmFZQzY-HdHpwhAqbFKNHt0njE",
-  authDomain: "suarakan.firebaseapp.com",
-  projectId: "suarakan",
-  storageBucket: "suarakan.firebasestorage.app",
-  messagingSenderId: "46474498640",
-  appId: "1:46474498640:web:891520e8e14e017a6cf755"
+// Initialize data
+let submissions = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+let stats = JSON.parse(localStorage.getItem(STATS_KEY)) || {
+    total: 0,
+    processed: 0,
+    completed: 0
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Fungsi simpan data
+function saveToLocalStorage() {
+    localStorage.setItem(DB_KEY, JSON.stringify(submissions));
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    console.log('Data disimpan:', submissions.length, 'aspirasi');
+}
+
+// Fungsi update statistik
+function updateStatsDisplay() {
+    const total = submissions.length;
+    const processed = submissions.filter(s => s.status === 'processed' || s.status === 'completed').length;
+    const completed = submissions.filter(s => s.status === 'completed').length;
+    
+    // Update angka dengan animasi
+    document.getElementById('totalSubmissions').textContent = total;
+    document.getElementById('processedCount').textContent = processed;
+    document.getElementById('completedCount').textContent = completed;
+    
+    // Simpan stats
+    stats.total = total;
+    stats.processed = processed;
+    stats.completed = completed;
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
+// Fungsi generate kode tiket
+function generateTicketCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'OSIS-';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+// Fungsi tambah aspirasi baru
+function addNewSubmission(type, category, message, tags, priority) {
+    const ticketCode = generateTicketCode();
+    const now = new Date();
+    
+    const newSubmission = {
+        id: ticketCode,
+        type: type,
+        category: category,
+        message: message,
+        tags: tags,
+        priority: priority,
+        status: 'received',
+        reply: 'Terima kasih atas kontribusimu! Pesanmu sudah diterima OSIS dan akan diproses maksimal 7 hari kerja.',
+        date: now.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }),
+        time: now.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit'
+        }),
+        timestamp: now.getTime(),
+        public: true
+    };
+    
+    // Tambah ke array
+    submissions.unshift(newSubmission);
+    
+    // Simpan ke localStorage
+    saveToLocalStorage();
+    
+    // Update UI
+    updateStatsDisplay();
+    renderHistory();
+    
+    return ticketCode;
+}
+
+// Fungsi render history
+function renderHistory(filter = 'all') {
+    const container = document.getElementById('historyContainer');
+    if (!container) return;
+    
+    // Filter data
+    let filteredData = submissions.filter(s => s.public);
+    
+    if (filter === 'aspiration') {
+        filteredData = filteredData.filter(s => s.type === 'aspiration');
+    } else if (filter === 'critique') {
+        filteredData = filteredData.filter(s => s.type === 'critique');
+    } else if (filter === 'completed') {
+        filteredData = filteredData.filter(s => s.status === 'completed');
+    } else if (filter === 'recent') {
+        filteredData = filteredData.slice(0, 5);
+    }
+    
+    // Kosongkan container
+    container.innerHTML = '';
+    
+    // Jika tidak ada data
+    if (filteredData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-comment-slash"></i>
+                <h3>Belum ada data</h3>
+                <p>${filter === 'all' ? 'Belum ada aspirasi atau kritik yang dibagikan' : 
+                   'Tidak ada data dengan filter ini'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Render setiap item
+    filteredData.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'history-item';
+        
+        // Status color
+        let statusClass = 'status-received';
+        let statusText = '📥 Diterima';
+        if (item.status === 'processed') {
+            statusClass = 'status-processed';
+            statusText = '🔄 Diproses';
+        } else if (item.status === 'completed') {
+            statusClass = 'status-completed';
+            statusText = '✅ Selesai';
+        }
+        
+        // Type color
+        const typeClass = item.type === 'aspiration' ? 'aspiration-type' : 'critique-type';
+        const typeText = item.type === 'aspiration' ? 'Aspirasi' : 'Kritik';
+        
+        itemDiv.innerHTML = `
+            <div class="history-item-header">
+                <div class="history-meta">
+                    <span class="history-type ${typeClass}">
+                        <i class="fas ${item.type === 'aspiration' ? 'fa-lightbulb' : 'fa-balance-scale'}"></i>
+                        ${typeText}
+                    </span>
+                    <span class="history-status ${statusClass}">${statusText}</span>
+                    <span class="history-category">${getCategoryText(item.category)}</span>
+                </div>
+                <span class="history-date">
+                    <i class="far fa-calendar"></i>
+                    ${item.date}
+                </span>
+            </div>
+            ${item.tags && item.tags.length > 0 ? 
+                `<div style="margin-bottom: 12px;">
+                    ${item.tags.map(tag => 
+                        `<span class="history-category" style="margin-right: 8px;">${tag}</span>`
+                    ).join('')}
+                </div>` : ''}
+            <div class="history-content">
+                ${item.message}
+            </div>
+            ${item.reply ? `
+            <div class="history-reply">
+                <div class="reply-header">
+                    <span class="reply-label">
+                        <i class="fas fa-reply"></i>
+                        Balasan OSIS
+                    </span>
+                    <span class="reply-date">${item.date}</span>
+                </div>
+                <div class="reply-content">
+                    ${item.reply}
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        container.appendChild(itemDiv);
+    });
+}
+
+// Helper functions
+function getCategoryText(category) {
+    const categories = {
+        'kegiatan': 'Kegiatan OSIS',
+        'fasilitas': 'Fasilitas Sekolah',
+        'akademik': 'Program Akademik',
+        'ekstrakurikuler': 'Ekstrakurikuler',
+        'lingkungan': 'Lingkungan Sekolah',
+        'disiplin': 'Kedisiplinan',
+        'other': 'Lainnya'
+    };
+    return categories[category] || 'Lainnya';
+}
+
+// ==================== INTEGRASI DENGAN FORM ANDA ====================
+
+// Variable untuk tracking type
+let currentSubmissionType = 'aspiration';
+
+// Event listener untuk tombol aspirasi
+document.getElementById('aspirationBtn')?.addEventListener('click', () => {
+    currentSubmissionType = 'aspiration';
+    document.getElementById('modalTitle').textContent = 'Tulis Aspirasi';
+    document.getElementById('modalOverlay').classList.add('show');
+});
+
+// Event listener untuk tombol kritik
+document.getElementById('critiqueBtn')?.addEventListener('click', () => {
+    currentSubmissionType = 'critique';
+    document.getElementById('modalTitle').textContent = 'Tulis Kritik';
+    document.getElementById('modalOverlay').classList.add('show');
+});
+
+// Event listener untuk form submission (FIXED!)
+document.addEventListener('DOMContentLoaded', function() {
+    // Inisialisasi data
+    updateStatsDisplay();
+    renderHistory();
+    
+    // Tangkap form submission
+    const form = document.getElementById('submissionForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Form submitted!');
+            
+            // Ambil data dari form
+            const message = document.getElementById('message')?.value.trim() || '';
+            const category = document.getElementById('category')?.value || 'kegiatan';
+            const tagsInput = document.getElementById('tags')?.value || '';
+            const priority = document.getElementById('priority')?.value || 'normal';
+            
+            // Validasi
+            if (message.length < 20) {
+                alert('Pesan minimal 20 karakter');
+                return;
+            }
+            
+            // Proses tags
+            const tags = tagsInput.split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
+            
+            // Tampilkan loading
+            const submitBtn = document.getElementById('submitBtn');
+            const originalHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+            submitBtn.disabled = true;
+            
+            // Simpan ke localStorage (simulasi async)
+            setTimeout(() => {
+                const ticketCode = addNewSubmission(
+                    currentSubmissionType,
+                    category,
+                    message,
+                    tags,
+                    priority
+                );
+                
+                // Reset form
+                form.reset();
+                document.getElementById('charCounter').textContent = '0/1000 karakter';
+                
+                // Reset button
+                submitBtn.innerHTML = originalHtml;
+                submitBtn.disabled = false;
+                
+                // Tutup modal
+                document.getElementById('modalOverlay').classList.remove('show');
+                
+                // Tampilkan sukses
+                alert(`✅ BERHASIL! Aspirasi terkirim!\n\nKode Tiket: ${ticketCode}\n\nSimpan kode ini untuk cek status.`);
+                
+                console.log('Aspirasi berhasil disimpan:', ticketCode);
+            }, 800);
+        });
+    }
+    
+    // Event listener untuk cek status
+    document.getElementById('checkStatusBtn')?.addEventListener('click', function() {
+        const ticketCode = document.getElementById('ticketCode')?.value.trim().toUpperCase() || '';
+        
+        if (!ticketCode) {
+            alert('Masukkan kode tiket terlebih dahulu');
+            return;
+        }
+        
+        // Cari data
+        const submission = submissions.find(s => s.id === ticketCode);
+        
+        if (submission) {
+            const statusText = submission.status === 'received' ? '📥 Diterima' :
+                              submission.status === 'processed' ? '🔄 Diproses' : '✅ Selesai';
+            
+            alert(`Status Tiket ${ticketCode}:\n\n` +
+                  `Jenis: ${submission.type === 'aspiration' ? 'Aspirasi' : 'Kritik'}\n` +
+                  `Status: ${statusText}\n` +
+                  `Tanggal: ${submission.date}\n` +
+                  `Prioritas: ${submission.priority}\n\n` +
+                  (submission.reply ? `Balasan OSIS:\n"${submission.reply}"` : 'Belum ada balasan'));
+        } else {
+            alert('❌ Kode tiket tidak ditemukan. Pastikan kode benar.');
+        }
+    });
+    
+    // Event listener untuk filter
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const filter = this.dataset.filter;
+            renderHistory(filter);
+        });
+    });
+    
+    // Tambah data contoh jika kosong
+    if (submissions.length === 0) {
+        console.log('Menambahkan data contoh...');
+        
+        // Tambah beberapa data contoh
+        addNewSubmission(
+            'aspiration',
+            'kegiatan',
+            'Saya usulkan ada kegiatan class meeting sebelum ujian akhir semester untuk refreshing. Bisa berupa lomba-lomba antar kelas yang ringan dan menyenangkan.',
+            ['class meeting', 'lomba', 'refresh'],
+            'medium'
+        );
+        
+        addNewSubmission(
+            'critique',
+            'fasilitas',
+            'Toilet di lantai 3 sangat bau dan sering kekurangan sabun. Mohon diperhatikan kebersihannya karena banyak siswa yang mengeluh.',
+            ['toilet', 'kebersihan'],
+            'high'
+        );
+        
+        console.log('Data contoh ditambahkan');
+    }
+    
+    // Real-time simulation (optional)
+    setInterval(() => {
+        const indicator = document.getElementById('realtimeIndicator');
+        if (indicator) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            indicator.querySelector('span').textContent = `Live Update: ${timeStr}`;
+        }
+    }, 1000);
+    
+    console.log('SuaraOSIS siap digunakan! Total data:', submissions.length);
+});
+</script>
 </body>
 </html>
