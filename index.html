@@ -1,40 +1,104 @@
-https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css        }
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuaraOSIS - Platform Aspirasi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS SEDERHANA UNTUK MODAL (FORM POPUP) */
+        :root { --osis-blue: #1e3a8a; --white: #ffffff; }
+        body { font-family: sans-serif; background: #f3f4f6; text-align: center; padding: 50px; }
+        .btn { padding: 15px 30px; background: var(--osis-blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px; }
         
-        /* Dark Theme Variables */
-        .dark-mode {
-            --osis-blue: #3b82f6;
-            --osis-blue-light: #60a5fa;
-            --osis-blue-dark: #1d4ed8;
-            --white: #111827;
-            --gray-50: #1f2937;
-            --gray-100: #374151;
-            --gray-200: #4b5563;
-            --gray-300: #6b7280;
-            --gray-400: #9ca3af;
-            --gray-500: #d1d5db;
-            --gray-600: #e5e7eb;
-            --gray-700: #f3f4f6;
-            --gray-800: #f9fafb;
+        #modalForm {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .modal-content {
+            background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align: left;
         }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--gray-50);
-            color: var(--gray-800);
-            line-height: 1.7;
-            transition: var(--transition);
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            line-height: 1.3;
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>Platform Aspirasi OSIS</h1>
+    <p>Silakan klik tombol di bawah untuk mengirim pesan:</p>
+
+    <button class="btn" onclick="bukaModal('Aspirasi')">Kirim Aspirasi</button>
+    <button class="btn" style="background: #ef4444;" onclick="bukaModal('Kritik')">Kirim Kritik</button>
+
+    <div id="modalForm">
+        <div class="modal-content">
+            <h3 id="modalTitle">Kirim Pesan</h3>
+            <input type="text" id="namaInput" placeholder="Nama (Boleh dikosongkan)">
+            <textarea id="pesanInput" rows="4" placeholder="Tulis aspirasi/kritik kamu di sini..."></textarea>
+            <button class="btn" id="btnSubmit" style="width: 100%; margin: 0;">Kirim Sekarang</button>
+            <button onclick="tutupModal()" style="display:block; margin: 10px auto; background:none; border:none; color:gray; cursor:pointer;">Batal</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIG KAMU
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvRGQ-DKmFZQzY-HdHpwAqbFKNHT0njE",
+            authDomain: "suarakan.firebaseapp.com",
+            projectId: "suarakan",
+            storageBucket: "suarakan.firebasestorage.app",
+            messagingSenderId: "46474498640",
+            appId: "1:46474498640:web:891520e8e14e017a6cf755"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let jenisPesanGlobal = "";
+
+        // Fungsi Buka Modal
+        window.bukaModal = (jenis) => {
+            jenisPesanGlobal = jenis;
+            document.getElementById('modalTitle').innerText = "Kirim " + jenis;
+            document.getElementById('modalForm').style.display = "flex";
+        };
+
+        // Fungsi Tutup Modal
+        window.tutupModal = () => {
+            document.getElementById('modalForm').style.display = "none";
+        };
+
+        // Fungsi Kirim ke Firebase
+        document.getElementById('btnSubmit').onclick = async () => {
+            const nama = document.getElementById('namaInput').value || "Anonim";
+            const pesan = document.getElementById('pesanInput').value;
+
+            if (!pesan) return alert("Pesan tidak boleh kosong!");
+
+            document.getElementById('btnSubmit').innerText = "Mengirim...";
+            document.getElementById('btnSubmit').disabled = true;
+
+            try {
+                await addDoc(collection(db, "pesan_osis"), {
+                    tipe: jenisPesanGlobal,
+                    nama: nama,
+                    pesan: pesan,
+                    waktu: serverTimestamp()
+                });
+
+                alert("Berhasil dikirim! Terima kasih.");
+                location.reload(); 
+            } catch (e) {
+                alert("Error: " + e.message);
+                document.getElementById('btnSubmit').disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>            line-height: 1.3;
         }
         
         .container {
