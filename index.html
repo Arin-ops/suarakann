@@ -3493,25 +3493,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('SuaraOSIS siap digunakan! Total data:', submissions.length);
 });
 </script>
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+  const supabaseUrl = "https://xclmblovdjzegqksrkig.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjbG1ibG92ZGp6ZWdxa3Nya2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MjMyMDMsImV4cCI6MjA4NDA5OTIwM30.V58vIrPAm4bhPfB00UI-g4-ucFMyq3DOe8gEc57PFPg"
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCvRGQ-DKmFZQzY-HdHpwhAqbFKNHt0njE",
-    authDomain: "suarakan.firebaseapp.com",
-    databaseURL: "https://suarakan-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "suarakan",
-    storageBucket: "suarakan.firebasestorage.app",
-    messagingSenderId: "46474498640",
-    appId: "1:46474498640:web:c96eac3c2333bdcc6cf755"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-    </script>
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+</script>
 </body>
 </html>
