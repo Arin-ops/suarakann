@@ -3499,6 +3499,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjbG1ibG92ZGp6ZWdxa3Nya2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MjMyMDMsImV4cCI6MjA4NDA5OTIwM30.V58vIrPAm4bhPfB00UI-g4-ucFMyq3DOe8gEc57PFPg"
 
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    acync function kiriaspirasi() {
+        const pesan = await   supabaseclient 
+        .from("aspirasi")
+        .insert([{pesan{}]);
+
+        console.log(data error);
+
+        if (error) {
+            alert("ERROR: " + error.message);
+        } else {
+            alert("MASUK ✅");
+        }
+    }
 </script>
 </body>
 </html>
