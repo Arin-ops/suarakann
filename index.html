@@ -2264,205 +2264,261 @@
         </div>
     </footer>
 
+    <!-- Script Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
     <script>
-        // ==================== SISTEM REALTIME ====================
-        // Simulasi realtime dengan localStorage sync dan auto-refresh
-        const STORAGE_KEY = 'suaraosis_submissions';
-        const TICKET_COUNTER_KEY = 'suaraosis_ticket_counter';
-        const LAST_UPDATE_KEY = 'suaraosis_last_update';
+        // ==================== INISIALISASI SUPABASE ====================
+        const SUPABASE_URL = "https://xclmblovdjzegqksrkig.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjbG1ibG92ZGp6ZWdxa3Nya2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MjMyMDMsImV4cCI6MjA4NDA5OTIwM30.V58vIrPAm4bhPfB00UI-g4-ucFMyq3DOe8gEc57PFPg";
         
-        // Initialize data dengan contoh data OSIS
-        let submissions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        let ticketCounter = parseInt(localStorage.getItem(TICKET_COUNTER_KEY)) || 1000;
+        // Inisialisasi client Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // Data sampel jika kosong (khusus OSIS)
-        if (submissions.length === 0) {
-            submissions = [
-                {
-                    id: 'OSIS-' + ticketCounter++,
-                    type: 'aspiration',
-                    category: 'kegiatan',
-                    date: '15 November 2023',
-                    content: 'Saya usulkan ada kegiatan class meeting sebelum ujian akhir semester untuk refreshing. Bisa berupa lomba-lomba antar kelas yang ringan dan menyenangkan.',
-                    reply: 'Terima kasih atas usulannya! OSIS sedang merencanakan Class Meeting Week di minggu kedua Desember. Detail kegiatan akan diumumkan melalui mading.',
-                    status: 'completed',
-                    tags: ['class meeting', 'lomba', 'refresh'],
-                    public: true,
-                    priority: 'medium',
-                    timestamp: Date.now() - 86400000 * 2 // 2 hari lalu
-                },
-                {
-                    id: 'OSIS-' + ticketCounter++,
-                    type: 'critique',
-                    category: 'fasilitas',
-                    date: '12 November 2023',
-                    content: 'Toilet di lantai 3 sangat bau dan sering kekurangan sabun. Mohon diperhatikan kebersihannya karena banyak siswa yang mengeluh.',
-                    reply: 'Kritik diterima. OSIS telah berkoordinasi dengan bagian kebersihan untuk meningkatkan pengecekan toilet lantai 3. Sabun akan ditambah dan jadwal bersih lebih intensif.',
-                    status: 'processed',
-                    tags: ['toilet', 'kebersihan', 'lantai 3'],
-                    public: true,
-                    priority: 'high',
-                    timestamp: Date.now() - 86400000 * 5 // 5 hari lalu
-                },
-                {
-                    id: 'OSIS-' + ticketCounter++,
-                    type: 'aspiration',
-                    category: 'ekstrakurikuler',
-                    date: '10 November 2023',
-                    content: 'Bisa tambah ekstrakurikuler coding atau robotika? Banyak siswa yang tertarik dengan teknologi dan programming.',
-                    reply: 'Aspirasi yang bagus! OSIS sedang survey minat siswa untuk ekstrakurikuler baru. Hasil survey akan dibawa ke rapat dengan guru pembina.',
-                    status: 'received',
-                    tags: ['ekstrakurikuler', 'coding', 'teknologi'],
-                    public: true,
-                    priority: 'normal',
-                    timestamp: Date.now() - 86400000 * 7 // 7 hari lalu
-                },
-                {
-                    id: 'OSIS-' + ticketCounter++,
-                    type: 'aspiration',
-                    category: 'lingkungan',
-                    date: '5 November 2023',
-                    content: 'Bisa dibuat tempat sampah terpisah untuk organik dan anorganik di setiap kelas? Supaya kita bisa belajar pilah sampah sejak di sekolah.',
-                    reply: 'Ide yang sangat baik untuk pendidikan lingkungan. OSIS akan koordinasi dengan wali kelas dan bagian kebersihan untuk implementasinya.',
-                    status: 'completed',
-                    tags: ['lingkungan', 'sampah', 'daur ulang'],
-                    public: true,
-                    priority: 'medium',
-                    timestamp: Date.now() - 86400000 * 10 // 10 hari lalu
-                },
-                {
-                    id: 'OSIS-' + ticketCounter++,
-                    type: 'critique',
-                    category: 'disiplin',
-                    date: '1 November 2023',
-                    content: 'Sistem kedisiplinan terlalu berat untuk pelanggaran kecil. Mending diberi peringatan dulu sebelum langsung diberikan sanksi.',
-                    reply: 'Masukan diterima. OSIS akan evaluasi sistem poin pelanggaran dan pertimbangkan sistem peringatan bertahap di rapat mendatang.',
-                    status: 'processed',
-                    tags: ['disiplin', 'sanksi', 'sistem'],
-                    public: true,
-                    priority: 'high',
-                    timestamp: Date.now() - 86400000 * 14 // 14 hari lalu
-                }
-            ];
-            saveData();
-        }
+        // ==================== VARIABEL GLOBAL ====================
+        let currentSubmissionType = 'aspiration';
+        let currentFilter = 'all';
+        let submissions = [];
         
-        // ==================== FUNGSI REALTIME ====================
-        let realtimeInterval;
-        let lastUpdateTime = localStorage.getItem(LAST_UPDATE_KEY) || Date.now();
+        // ==================== FUNGSI SUPABASE ====================
         
-        // Fungsi untuk memulai sistem realtime
-        function startRealtimeSystem() {
-            // Update realtime indicator
-            updateRealtimeIndicator();
-            
-            // Mulai interval untuk cek update
-            realtimeInterval = setInterval(() => {
-                checkForUpdates();
-                updateRealtimeIndicator();
-            }, 5000); // Cek setiap 5 detik
-            
-            // Cek update sekarang juga
-            checkForUpdates();
-        }
-        
-        // Fungsi untuk cek update dari localStorage (simulasi realtime)
-        function checkForUpdates() {
-            const storedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
-            
-            if (storedLastUpdate && storedLastUpdate > lastUpdateTime) {
-                // Ada update baru
-                console.log('Update baru ditemukan!');
-                lastUpdateTime = storedLastUpdate;
+        // Fungsi untuk mengirim aspirasi ke Supabase
+        async function saveToSupabase(data) {
+            try {
+                console.log('Mengirim data ke Supabase:', data);
                 
-                // Reload data dari localStorage
-                const newSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-                if (newSubmissions.length !== submissions.length) {
-                    submissions = newSubmissions;
-                    updateStats();
-                    renderHistory();
-                    
-                    // Tampilkan notifikasi (jika user tidak sedang aktif mengetik)
-                    if (!document.activeElement || 
-                        (document.activeElement.tagName !== 'TEXTAREA' && 
-                         document.activeElement.tagName !== 'INPUT')) {
-                        showNewUpdateNotification();
-                    }
+                const { data: result, error } = await supabase
+                    .from('aspirasi')
+                    .insert([{
+                        type: data.type,
+                        category: data.category,
+                        message: data.message,
+                        tags: data.tags,
+                        priority: data.priority,
+                        ticket_code: data.ticketCode,
+                        status: 'received',
+                        is_public: true,
+                        created_at: new Date().toISOString()
+                    }])
+                    .select();
+                
+                if (error) {
+                    console.error('ERROR Supabase:', error);
+                    throw error;
                 }
+                
+                console.log('SUKSES: Data tersimpan di Supabase', result);
+                return { success: true, data: result };
+                
+            } catch (error) {
+                console.error('ERROR:', error);
+                return { success: false, error: error.message };
             }
         }
         
-        // Fungsi untuk update realtime indicator
-        function updateRealtimeIndicator() {
-            const indicator = document.getElementById('realtimeIndicator');
-            const icon = indicator.querySelector('i');
-            const text = indicator.querySelector('span');
-            
-            // Update waktu terakhir
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('id-ID', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            text.textContent = `Realtime - Update: ${timeStr}`;
-            
-            // Animasi icon
-            icon.classList.toggle('fa-spin');
-            setTimeout(() => icon.classList.toggle('fa-spin'), 1000);
-        }
-        
-        // Fungsi untuk show notification update
-        function showNewUpdateNotification() {
-            // Cek jika sudah ada notification
-            if (document.querySelector('.update-notification')) return;
-            
-            const notification = document.createElement('div');
-            notification.className = 'update-notification';
-            notification.style.cssText = `
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                background: var(--success);
-                color: white;
-                padding: 15px 20px;
-                border-radius: var(--radius);
-                box-shadow: var(--shadow-xl);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                z-index: 1000;
-                animation: slideInRight 0.3s ease-out;
-                cursor: pointer;
-            `;
-            
-            notification.innerHTML = `
-                <i class="fas fa-sync-alt"></i>
-                <div>
-                    <strong>Update Baru!</strong>
-                    <div style="font-size: 12px; opacity: 0.9;">Ada aspirasi/kritik baru ditambahkan</div>
-                </div>
-                <i class="fas fa-times" style="margin-left: 10px;"></i>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Click untuk tutup
-            notification.addEventListener('click', () => {
-                notification.style.animation = 'slideOutRight 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            });
-            
-            // Auto remove setelah 5 detik
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.style.animation = 'slideOutRight 0.3s ease-out';
-                    setTimeout(() => notification.remove(), 300);
+        // Fungsi untuk mengambil data dari Supabase
+        async function loadFromSupabase() {
+            try {
+                console.log('Memuat data dari Supabase...');
+                
+                const { data, error } = await supabase
+                    .from('aspirasi')
+                    .select('*')
+                    .eq('is_public', true)
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('ERROR mengambil data:', error);
+                    throw error;
                 }
-            }, 5000);
+                
+                console.log('Data dari Supabase:', data);
+                submissions = data || [];
+                
+                // Update UI
+                updateStatsDisplay();
+                renderHistory();
+                
+                return submissions;
+                
+            } catch (error) {
+                console.error('ERROR:', error);
+                submissions = [];
+                return [];
+            }
         }
         
-        // ==================== FUNGSI UTAMA ====================
+        // Fungsi untuk cek status di Supabase
+        async function checkStatusInSupabase(ticketCode) {
+            try {
+                console.log('Mengecek status untuk tiket:', ticketCode);
+                
+                const { data, error } = await supabase
+                    .from('aspirasi')
+                    .select('*')
+                    .eq('ticket_code', ticketCode)
+                    .single();
+                
+                if (error) {
+                    console.error('ERROR cek status:', error);
+                    return null;
+                }
+                
+                console.log('Hasil cek status:', data);
+                return data;
+                
+            } catch (error) {
+                console.error('ERROR:', error);
+                return null;
+            }
+        }
+        
+        // ==================== FUNGSI UTILITAS ====================
+        
+        // Fungsi generate kode tiket
+        function generateTicketCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = 'OSIS-';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        // Fungsi update statistik
+        function updateStatsDisplay() {
+            const total = submissions.length;
+            const processed = submissions.filter(s => s.status === 'processed' || s.status === 'completed').length;
+            const completed = submissions.filter(s => s.status === 'completed').length;
+            
+            // Update angka dengan animasi
+            document.getElementById('totalSubmissions').textContent = total;
+            document.getElementById('processedCount').textContent = processed;
+            document.getElementById('completedCount').textContent = completed;
+        }
+        
+        // Fungsi render history
+        function renderHistory(filter = 'all') {
+            const container = document.getElementById('historyContainer');
+            if (!container) return;
+            
+            // Filter data
+            let filteredData = submissions.filter(s => s.is_public);
+            
+            if (filter === 'aspiration') {
+                filteredData = filteredData.filter(s => s.type === 'aspiration');
+            } else if (filter === 'critique') {
+                filteredData = filteredData.filter(s => s.type === 'critique');
+            } else if (filter === 'completed') {
+                filteredData = filteredData.filter(s => s.status === 'completed');
+            } else if (filter === 'recent') {
+                filteredData = filteredData.slice(0, 5);
+            }
+            
+            // Kosongkan container
+            container.innerHTML = '';
+            
+            // Jika tidak ada data
+            if (filteredData.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-comment-slash"></i>
+                        <h3>Belum ada data</h3>
+                        <p>${filter === 'all' ? 'Belum ada aspirasi atau kritik yang dibagikan' : 
+                           'Tidak ada data dengan filter ini'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Render setiap item
+            filteredData.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'history-item';
+                
+                // Status color
+                let statusClass = 'status-received';
+                let statusText = '📥 Diterima';
+                if (item.status === 'processed') {
+                    statusClass = 'status-processed';
+                    statusText = '🔄 Diproses';
+                } else if (item.status === 'completed') {
+                    statusClass = 'status-completed';
+                    statusText = '✅ Selesai';
+                }
+                
+                // Type color
+                const typeClass = item.type === 'aspiration' ? 'aspiration-type' : 'critique-type';
+                const typeText = item.type === 'aspiration' ? 'Aspirasi' : 'Kritik';
+                
+                // Format tanggal
+                const date = new Date(item.created_at);
+                const formattedDate = date.toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                
+                itemDiv.innerHTML = `
+                    <div class="history-item-header">
+                        <div class="history-meta">
+                            <span class="history-type ${typeClass}">
+                                <i class="fas ${item.type === 'aspiration' ? 'fa-lightbulb' : 'fa-balance-scale'}"></i>
+                                ${typeText}
+                            </span>
+                            <span class="history-status ${statusClass}">${statusText}</span>
+                            <span class="history-category">${getCategoryText(item.category)}</span>
+                        </div>
+                        <span class="history-date">
+                            <i class="far fa-calendar"></i>
+                            ${formattedDate}
+                        </span>
+                    </div>
+                    ${item.tags && item.tags.length > 0 ? 
+                        `<div style="margin-bottom: 12px;">
+                            ${item.tags.map(tag => 
+                                `<span class="history-category" style="margin-right: 8px;">${tag}</span>`
+                            ).join('')}
+                        </div>` : ''}
+                    <div class="history-content">
+                        ${item.message}
+                    </div>
+                    ${item.reply ? `
+                    <div class="history-reply">
+                        <div class="reply-header">
+                            <span class="reply-label">
+                                <i class="fas fa-reply"></i>
+                                Balasan OSIS
+                            </span>
+                            <span class="reply-date">${formattedDate}</span>
+                        </div>
+                        <div class="reply-content">
+                            ${item.reply}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+                
+                container.appendChild(itemDiv);
+            });
+        }
+        
+        // Helper function untuk kategori
+        function getCategoryText(category) {
+            const categories = {
+                'kegiatan': 'Kegiatan OSIS',
+                'fasilitas': 'Fasilitas Sekolah',
+                'akademik': 'Program Akademik',
+                'ekstrakurikuler': 'Ekstrakurikuler',
+                'lingkungan': 'Lingkungan Sekolah',
+                'disiplin': 'Kedisiplinan',
+                'other': 'Lainnya'
+            };
+            return categories[category] || 'Lainnya';
+        }
+        
+        // ==================== EVENT LISTENERS ====================
+        
         // DOM Elements
         const themeToggle = document.getElementById('themeToggle');
         const menuBtn = document.getElementById('menuBtn');
@@ -2488,7 +2544,6 @@
         const closePrivacyModal = document.getElementById('closePrivacyModal');
         const submissionForm = document.getElementById('submissionForm');
         const modalTitle = document.getElementById('modalTitle');
-        const historyContainer = document.getElementById('historyContainer');
         const messageInput = document.getElementById('message');
         const categorySelect = document.getElementById('category');
         const charCounter = document.getElementById('charCounter');
@@ -2498,18 +2553,11 @@
         const filterButtons = document.querySelectorAll('.filter-btn');
         const ticketCodeInput = document.getElementById('ticketCode');
         const checkStatusBtn = document.getElementById('checkStatusBtn');
-        const totalSubmissions = document.getElementById('totalSubmissions');
-        const processedCount = document.getElementById('processedCount');
-        const completedCount = document.getElementById('completedCount');
         const footerAboutBtn = document.getElementById('footerAboutBtn');
         const footerFaqBtn = document.getElementById('footerFaqBtn');
         const footerPrivacyBtn = document.getElementById('footerPrivacyBtn');
         const footerContactBtn = document.getElementById('footerContactBtn');
         
-        let currentSubmissionType = 'aspiration';
-        let currentFilter = 'all';
-        
-        // ==================== EVENT LISTENERS ====================
         // Theme Toggle
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
@@ -2519,7 +2567,6 @@
             } else {
                 icon.className = 'fas fa-moon';
             }
-            saveData();
         });
         
         // Toggle Dropdown Menu
@@ -2701,12 +2748,12 @@
                 
                 // Update filter
                 currentFilter = button.dataset.filter;
-                renderHistory();
+                renderHistory(currentFilter);
             });
         });
         
-        // Check Status
-        checkStatusBtn.addEventListener('click', () => {
+        // Check Status Button
+        checkStatusBtn.addEventListener('click', async () => {
             const ticketCode = ticketCodeInput.value.trim().toUpperCase();
             
             if (!ticketCode) {
@@ -2720,18 +2767,25 @@
                 return;
             }
             
-            const submission = submissions.find(sub => sub.id === ticketCode);
-            
-            if (submission) {
-                alert(`Status untuk tiket ${ticketCode}:\n\n` +
-                      `Jenis: ${submission.type === 'aspiration' ? 'Aspirasi' : 'Kritik'}\n` +
-                      `Kategori: ${getCategoryText(submission.category)}\n` +
-                      `Status: ${getStatusText(submission.status)}\n` +
-                      `Tanggal: ${submission.date}\n` +
-                      `Prioritas: ${getPriorityText(submission.priority)}\n\n` +
-                      `${submission.reply ? '✅ Sudah ada balasan dari OSIS.' : '⏳ Masih dalam proses oleh OSIS.'}`);
-            } else {
-                alert('Kode tiket tidak ditemukan. Pastikan kode yang dimasukkan benar.');
+            try {
+                const submission = await checkStatusInSupabase(ticketCode);
+                
+                if (submission) {
+                    const statusText = submission.status === 'received' ? '📥 Diterima' :
+                                      submission.status === 'processed' ? '🔄 Diproses' : '✅ Selesai';
+                    
+                    alert(`Status untuk tiket ${ticketCode}:\n\n` +
+                          `Jenis: ${submission.type === 'aspiration' ? 'Aspirasi' : 'Kritik'}\n` +
+                          `Kategori: ${getCategoryText(submission.category)}\n` +
+                          `Status: ${statusText}\n` +
+                          `Prioritas: ${submission.priority || 'Normal'}\n\n` +
+                          `${submission.reply ? '✅ Sudah ada balasan dari OSIS.' : '⏳ Masih dalam proses oleh OSIS.'}`);
+                } else {
+                    alert('Kode tiket tidak ditemukan. Pastikan kode yang dimasukkan benar.');
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan saat mengecek status. Silakan coba lagi.');
+                console.error(error);
             }
         });
         
@@ -2763,270 +2817,60 @@
             loadingSpinner.style.display = 'inline-block';
             submitBtn.disabled = true;
             
-            // Simulate API call delay (realtime effect)
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Generate ticket code
-            const ticketCode = 'OSIS-' + ticketCounter++;
-            
-            // Create new submission
-            const newSubmission = {
-                id: ticketCode,
-                type: currentSubmissionType,
-                category: category,
-                date: new Date().toLocaleDateString('id-ID', { 
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric' 
-                }),
-                content: message,
-                reply: "Terima kasih atas kontribusimu. Pesanmu telah diterima OSIS dan akan ditinjau. Balasan akan diberikan maksimal dalam 7 hari kerja.",
-                status: 'received',
-                tags: tags,
-                priority: priority,
-                public: Math.random() > 0.3, // 70% chance to be public
-                timestamp: Date.now()
-            };
-            
-            // Add to submissions
-            submissions.unshift(newSubmission);
-            
-            // Save data dengan timestamp update
-            saveData();
-            localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
-            
-            // Update stats
-            updateStats();
-            
-            // Reset form
-            submissionForm.reset();
-            charCounter.textContent = '0/1000 karakter';
-            charCounter.classList.remove('warning', 'danger');
-            
-            // Hide loading state
-            submitText.style.display = 'inline';
-            loadingSpinner.style.display = 'none';
-            submitBtn.disabled = false;
-            
-            // Close modal
-            modalOverlay.classList.remove('show');
-            
-            // Show success message with ticket code
-            alert(`✅ Terima kasih! ${currentSubmissionType === 'aspiration' ? 'Aspirasi' : 'Kritik'}mu telah dikirim ke OSIS.\n\n` +
-                  `📋 Kode Tiket: ${ticketCode}\n\n` +
-                  `Simpan kode ini untuk mengecek status balasan.\n` +
-                  `OSIS akan membalas maksimal dalam 7 hari kerja.`);
-            
-            // Render history
-            renderHistory();
-            
-            // Trigger realtime update untuk browser lain
-            if (typeof BroadcastChannel !== 'undefined') {
-                try {
-                    const channel = new BroadcastChannel('suaraosis_updates');
-                    channel.postMessage({ type: 'new_submission', timestamp: Date.now() });
-                } catch (e) {
-                    console.log('BroadcastChannel not supported');
+            try {
+                // Generate ticket code
+                const ticketCode = generateTicketCode();
+                
+                // Prepare data
+                const submissionData = {
+                    type: currentSubmissionType,
+                    category: category,
+                    message: message,
+                    tags: tags,
+                    priority: priority,
+                    ticketCode: ticketCode
+                };
+                
+                // Save to Supabase
+                const result = await saveToSupabase(submissionData);
+                
+                if (result.success) {
+                    // Reset form
+                    submissionForm.reset();
+                    charCounter.textContent = '0/1000 karakter';
+                    charCounter.classList.remove('warning', 'danger');
+                    
+                    // Reload data from Supabase
+                    await loadFromSupabase();
+                    
+                    // Close modal
+                    modalOverlay.classList.remove('show');
+                    
+                    // Show success message
+                    alert(`✅ BERHASIL! ${currentSubmissionType === 'aspiration' ? 'Aspirasi' : 'Kritik'} terkirim!\n\n` +
+                          `📋 Kode Tiket: ${ticketCode}\n\n` +
+                          `Simpan kode ini untuk mengecek status balasan.\n` +
+                          `OSIS akan membalas maksimal dalam 7 hari kerja.`);
+                } else {
+                    throw new Error(result.error);
                 }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('❌ Gagal mengirim aspirasi. Silakan coba lagi atau hubungi pengurus OSIS.');
+            } finally {
+                // Hide loading state
+                submitText.style.display = 'inline';
+                loadingSpinner.style.display = 'none';
+                submitBtn.disabled = false;
             }
         });
         
-        // ==================== HELPER FUNCTIONS ====================
-        function saveData() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(submissions));
-            localStorage.setItem(TICKET_COUNTER_KEY, ticketCounter.toString());
-        }
-        
-        function getStatusText(status) {
-            switch(status) {
-                case 'received': return '📥 Diterima';
-                case 'processed': return '🔄 Diproses';
-                case 'completed': return '✅ Selesai';
-                default: return '📥 Diterima';
-            }
-        }
-        
-        function getStatusClass(status) {
-            switch(status) {
-                case 'received': return 'status-received';
-                case 'processed': return 'status-processed';
-                case 'completed': return 'status-completed';
-                default: return 'status-received';
-            }
-        }
-        
-        function getCategoryText(category) {
-            const categories = {
-                'kegiatan': 'Kegiatan OSIS',
-                'fasilitas': 'Fasilitas Sekolah',
-                'akademik': 'Program Akademik',
-                'ekstrakurikuler': 'Ekstrakurikuler',
-                'lingkungan': 'Lingkungan Sekolah',
-                'disiplin': 'Kedisiplinan',
-                'other': 'Lainnya'
-            };
-            return categories[category] || 'Lainnya';
-        }
-        
-        function getPriorityText(priority) {
-            const priorities = {
-                'normal': 'Normal',
-                'medium': 'Sedang',
-                'high': 'Tinggi',
-                'urgent': 'Mendesak'
-            };
-            return priorities[priority] || 'Normal';
-        }
-        
-        function updateStats() {
-            const total = submissions.length;
-            const processed = submissions.filter(s => s.status === 'processed' || s.status === 'completed').length;
-            const completed = submissions.filter(s => s.status === 'completed').length;
+        // ==================== INISIALISASI APLIKASI ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Aplikasi SuaraOSIS dimuat...');
             
-            // Animate counter
-            animateCounter(totalSubmissions, total);
-            animateCounter(processedCount, processed);
-            animateCounter(completedCount, completed);
-        }
-        
-        function animateCounter(element, target) {
-            const current = parseInt(element.textContent) || 0;
-            const increment = target > current ? 1 : -1;
-            const duration = 800; // ms
-            const stepTime = Math.max(20, Math.abs(Math.floor(duration / (target - current))));
-            
-            let currentValue = current;
-            const timer = setInterval(() => {
-                currentValue += increment;
-                element.textContent = currentValue;
-                
-                if (currentValue === target) {
-                    clearInterval(timer);
-                }
-            }, stepTime);
-        }
-        
-        function renderHistory() {
-            // Filter submissions
-            let filteredSubmissions = submissions.filter(sub => sub.public);
-            
-            // Apply current filter
-            if (currentFilter === 'aspiration') {
-                filteredSubmissions = filteredSubmissions.filter(sub => sub.type === 'aspiration');
-            } else if (currentFilter === 'critique') {
-                filteredSubmissions = filteredSubmissions.filter(sub => sub.type === 'critique');
-            } else if (currentFilter === 'completed') {
-                filteredSubmissions = filteredSubmissions.filter(sub => sub.status === 'completed');
-            } else if (currentFilter === 'recent') {
-                // Sort by timestamp (newest first)
-                filteredSubmissions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                // Take only 5 most recent
-                filteredSubmissions = filteredSubmissions.slice(0, 5);
-            }
-            
-            // Clear container
-            historyContainer.innerHTML = '';
-            
-            // Check if empty
-            if (filteredSubmissions.length === 0) {
-                const emptyState = document.createElement('div');
-                emptyState.className = 'empty-state';
-                emptyState.innerHTML = `
-                    <i class="fas fa-comment-slash"></i>
-                    <h3>Tidak ada data yang ditampilkan</h3>
-                    <p>${currentFilter === 'all' ? 'Belum ada aspirasi atau kritik yang dibagikan secara publik.' : 
-                       currentFilter === 'recent' ? 'Belum ada update terbaru.' :
-                       `Tidak ada ${currentFilter === 'aspiration' ? 'aspirasi' : currentFilter === 'critique' ? 'kritik' : 'item yang selesai'} yang dibagikan secara publik.`}</p>
-                    <button class="btn" style="margin-top: 20px;" id="emptyStateBtn">
-                        <i class="fas fa-plus"></i>
-                        Jadilah yang Pertama
-                    </button>
-                `;
-                historyContainer.appendChild(emptyState);
-                
-                // Add event listener to empty state button
-                document.getElementById('emptyStateBtn')?.addEventListener('click', () => {
-                    currentSubmissionType = 'aspiration';
-                    modalTitle.textContent = 'Tulis Aspirasi';
-                    modalOverlay.classList.add('show');
-                });
-                
-                return;
-            }
-            
-            // Render submissions
-            filteredSubmissions.forEach(submission => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'history-item';
-                
-                const typeClass = submission.type === 'aspiration' ? 'aspiration-type' : 'critique-type';
-                const typeText = submission.type === 'aspiration' ? 'Aspirasi' : 'Kritik';
-                const statusClass = getStatusClass(submission.status);
-                const statusText = getStatusText(submission.status);
-                const categoryText = getCategoryText(submission.category);
-                
-                // Format tags
-                const tagsHtml = submission.tags && submission.tags.length > 0 
-                    ? submission.tags.map(tag => `<span class="history-category" style="margin-right: 8px; margin-bottom: 4px; display: inline-block;">${tag}</span>`).join('')
-                    : '';
-                
-                // Priority indicator
-                const priorityHtml = submission.priority === 'urgent' 
-                    ? '<span class="history-status" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.2);">Mendesak</span>'
-                    : submission.priority === 'high'
-                    ? '<span class="history-status" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.2);">Tinggi</span>'
-                    : '';
-                
-                historyItem.innerHTML = `
-                    <div class="history-item-header">
-                        <div class="history-meta">
-                            <span class="history-type ${typeClass}">
-                                <i class="fas ${submission.type === 'aspiration' ? 'fa-lightbulb' : 'fa-balance-scale'}"></i>
-                                ${typeText}
-                            </span>
-                            <span class="history-status ${statusClass}">${statusText}</span>
-                            ${priorityHtml}
-                            <span class="history-category">${categoryText}</span>
-                        </div>
-                        <span class="history-date">
-                            <i class="far fa-calendar"></i>
-                            ${submission.date}
-                        </span>
-                    </div>
-                    ${tagsHtml ? `<div style="margin-bottom: 12px;">${tagsHtml}</div>` : ''}
-                    <div class="history-content">
-                        ${submission.content}
-                    </div>
-                    ${submission.reply ? `
-                    <div class="history-reply">
-                        <div class="reply-header">
-                            <span class="reply-label">
-                                <i class="fas fa-reply"></i>
-                                Balasan OSIS
-                            </span>
-                            <span class="reply-date">${submission.date}</span>
-                        </div>
-                        <div class="reply-content">
-                            ${submission.reply}
-                        </div>
-                    </div>
-                    ` : ''}
-                `;
-                
-                historyContainer.appendChild(historyItem);
-            });
-        }
-        
-        // ==================== INITIALIZE ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Render initial history
-            renderHistory();
-            
-            // Update stats
-            updateStats();
-            
-            // Start realtime system
-            startRealtimeSystem();
+            // Load data from Supabase
+            await loadFromSupabase();
             
             // Add keyboard shortcuts
             document.addEventListener('keydown', (e) => {
@@ -3046,472 +2890,26 @@
                 }
             });
             
-            // Add focus trap for modals
-            const modals = [modalOverlay, aboutModal, faqModal, contactModal, privacyModal];
-            modals.forEach(modal => {
-                modal.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab') {
-                        const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-                        const firstElement = focusableElements[0];
-                        const lastElement = focusableElements[focusableElements.length - 1];
-                        
-                        if (e.shiftKey) {
-                            if (document.activeElement === firstElement) {
-                                lastElement.focus();
-                                e.preventDefault();
-                            }
-                        } else {
-                            if (document.activeElement === lastElement) {
-                                firstElement.focus();
-                                e.preventDefault();
-                            }
-                        }
-                    }
-                });
-            });
-            
-            // Add smooth scrolling for anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
-            });
-            
-            // Listen for BroadcastChannel messages (for realtime updates across tabs)
-            if (typeof BroadcastChannel !== 'undefined') {
-                try {
-                    const channel = new BroadcastChannel('suaraosis_updates');
-                    channel.addEventListener('message', (event) => {
-                        if (event.data.type === 'new_submission') {
-                            // Update last update time
-                            lastUpdateTime = event.data.timestamp;
-                            checkForUpdates();
-                        }
+            // Real-time indicator update
+            setInterval(() => {
+                const indicator = document.getElementById('realtimeIndicator');
+                if (indicator) {
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
                     });
-                } catch (e) {
-                    console.log('BroadcastChannel not supported');
+                    indicator.querySelector('span').textContent = `Realtime - Update: ${timeStr}`;
+                    
+                    // Animation
+                    const icon = indicator.querySelector('i');
+                    icon.classList.toggle('fa-spin');
+                    setTimeout(() => icon.classList.toggle('fa-spin'), 1000);
                 }
-            }
+            }, 5000);
             
-            // Add CSS for animations
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes slideInRight {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                @keyframes slideOutRight {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(100%); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            console.log('SuaraOSIS Platform siap digunakan!');
-            console.log(`Total aspirasi/kritik: ${submissions.length}`);
-        });
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (realtimeInterval) {
-                clearInterval(realtimeInterval);
-            }
+            console.log('Aplikasi SuaraOSIS siap digunakan!');
         });
     </script>
-    <!-- TAMBAHKAN INI SEBELUM </body> -->
-<script>
-// ==================== SISTEM DATABASE SEDERHANA ====================
-const DB_KEY = 'suaraosis_data_v3';
-const STATS_KEY = 'suaraosis_stats_v3';
-
-// Initialize data
-let submissions = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-let stats = JSON.parse(localStorage.getItem(STATS_KEY)) || {
-    total: 0,
-    processed: 0,
-    completed: 0
-};
-
-// Fungsi simpan data
-function saveToLocalStorage() {
-    localStorage.setItem(DB_KEY, JSON.stringify(submissions));
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-    console.log('Data disimpan:', submissions.length, 'aspirasi');
-}
-
-// Fungsi update statistik
-function updateStatsDisplay() {
-    const total = submissions.length;
-    const processed = submissions.filter(s => s.status === 'processed' || s.status === 'completed').length;
-    const completed = submissions.filter(s => s.status === 'completed').length;
-    
-    // Update angka dengan animasi
-    document.getElementById('totalSubmissions').textContent = total;
-    document.getElementById('processedCount').textContent = processed;
-    document.getElementById('completedCount').textContent = completed;
-    
-    // Simpan stats
-    stats.total = total;
-    stats.processed = processed;
-    stats.completed = completed;
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-}
-
-// Fungsi generate kode tiket
-function generateTicketCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = 'OSIS-';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-}
-
-// Fungsi tambah aspirasi baru
-function addNewSubmission(type, category, message, tags, priority) {
-    const ticketCode = generateTicketCode();
-    const now = new Date();
-    
-    const newSubmission = {
-        id: ticketCode,
-        type: type,
-        category: category,
-        message: message,
-        tags: tags,
-        priority: priority,
-        status: 'received',
-        reply: 'Terima kasih atas kontribusimu! Pesanmu sudah diterima OSIS dan akan diproses maksimal 7 hari kerja.',
-        date: now.toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        }),
-        time: now.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }),
-        timestamp: now.getTime(),
-        public: true
-    };
-    
-    // Tambah ke array
-    submissions.unshift(newSubmission);
-    
-    // Simpan ke localStorage
-    saveToLocalStorage();
-    
-    // Update UI
-    updateStatsDisplay();
-    renderHistory();
-    
-    return ticketCode;
-}
-
-// Fungsi render history
-function renderHistory(filter = 'all') {
-    const container = document.getElementById('historyContainer');
-    if (!container) return;
-    
-    // Filter data
-    let filteredData = submissions.filter(s => s.public);
-    
-    if (filter === 'aspiration') {
-        filteredData = filteredData.filter(s => s.type === 'aspiration');
-    } else if (filter === 'critique') {
-        filteredData = filteredData.filter(s => s.type === 'critique');
-    } else if (filter === 'completed') {
-        filteredData = filteredData.filter(s => s.status === 'completed');
-    } else if (filter === 'recent') {
-        filteredData = filteredData.slice(0, 5);
-    }
-    
-    // Kosongkan container
-    container.innerHTML = '';
-    
-    // Jika tidak ada data
-    if (filteredData.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-comment-slash"></i>
-                <h3>Belum ada data</h3>
-                <p>${filter === 'all' ? 'Belum ada aspirasi atau kritik yang dibagikan' : 
-                   'Tidak ada data dengan filter ini'}</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Render setiap item
-    filteredData.forEach(item => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'history-item';
-        
-        // Status color
-        let statusClass = 'status-received';
-        let statusText = '📥 Diterima';
-        if (item.status === 'processed') {
-            statusClass = 'status-processed';
-            statusText = '🔄 Diproses';
-        } else if (item.status === 'completed') {
-            statusClass = 'status-completed';
-            statusText = '✅ Selesai';
-        }
-        
-        // Type color
-        const typeClass = item.type === 'aspiration' ? 'aspiration-type' : 'critique-type';
-        const typeText = item.type === 'aspiration' ? 'Aspirasi' : 'Kritik';
-        
-        itemDiv.innerHTML = `
-            <div class="history-item-header">
-                <div class="history-meta">
-                    <span class="history-type ${typeClass}">
-                        <i class="fas ${item.type === 'aspiration' ? 'fa-lightbulb' : 'fa-balance-scale'}"></i>
-                        ${typeText}
-                    </span>
-                    <span class="history-status ${statusClass}">${statusText}</span>
-                    <span class="history-category">${getCategoryText(item.category)}</span>
-                </div>
-                <span class="history-date">
-                    <i class="far fa-calendar"></i>
-                    ${item.date}
-                </span>
-            </div>
-            ${item.tags && item.tags.length > 0 ? 
-                `<div style="margin-bottom: 12px;">
-                    ${item.tags.map(tag => 
-                        `<span class="history-category" style="margin-right: 8px;">${tag}</span>`
-                    ).join('')}
-                </div>` : ''}
-            <div class="history-content">
-                ${item.message}
-            </div>
-            ${item.reply ? `
-            <div class="history-reply">
-                <div class="reply-header">
-                    <span class="reply-label">
-                        <i class="fas fa-reply"></i>
-                        Balasan OSIS
-                    </span>
-                    <span class="reply-date">${item.date}</span>
-                </div>
-                <div class="reply-content">
-                    ${item.reply}
-                </div>
-            </div>
-            ` : ''}
-        `;
-        
-        container.appendChild(itemDiv);
-    });
-}
-
-// Helper functions
-function getCategoryText(category) {
-    const categories = {
-        'kegiatan': 'Kegiatan OSIS',
-        'fasilitas': 'Fasilitas Sekolah',
-        'akademik': 'Program Akademik',
-        'ekstrakurikuler': 'Ekstrakurikuler',
-        'lingkungan': 'Lingkungan Sekolah',
-        'disiplin': 'Kedisiplinan',
-        'other': 'Lainnya'
-    };
-    return categories[category] || 'Lainnya';
-}
-
-// ==================== INTEGRASI DENGAN FORM ANDA ====================
-
-// Variable untuk tracking type
-let currentSubmissionType = 'aspiration';
-
-// Event listener untuk tombol aspirasi
-document.getElementById('aspirationBtn')?.addEventListener('click', () => {
-    currentSubmissionType = 'aspiration';
-    document.getElementById('modalTitle').textContent = 'Tulis Aspirasi';
-    document.getElementById('modalOverlay').classList.add('show');
-});
-
-// Event listener untuk tombol kritik
-document.getElementById('critiqueBtn')?.addEventListener('click', () => {
-    currentSubmissionType = 'critique';
-    document.getElementById('modalTitle').textContent = 'Tulis Kritik';
-    document.getElementById('modalOverlay').classList.add('show');
-});
-
-// Event listener untuk form submission (FIXED!)
-document.addEventListener('DOMContentLoaded', function() {
-    // Inisialisasi data
-    updateStatsDisplay();
-    renderHistory();
-    
-    // Tangkap form submission
-    const form = document.getElementById('submissionForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            console.log('Form submitted!');
-            
-            // Ambil data dari form
-            const message = document.getElementById('message')?.value.trim() || '';
-            const category = document.getElementById('category')?.value || 'kegiatan';
-            const tagsInput = document.getElementById('tags')?.value || '';
-            const priority = document.getElementById('priority')?.value || 'normal';
-            
-            // Validasi
-            if (message.length < 20) {
-                alert('Pesan minimal 20 karakter');
-                return;
-            }
-            
-            // Proses tags
-            const tags = tagsInput.split(',')
-                .map(tag => tag.trim())
-                .filter(tag => tag.length > 0);
-            
-            // Tampilkan loading
-            const submitBtn = document.getElementById('submitBtn');
-            const originalHtml = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
-            submitBtn.disabled = true;
-            
-            // Simpan ke localStorage (simulasi async)
-            setTimeout(() => {
-                const ticketCode = addNewSubmission(
-                    currentSubmissionType,
-                    category,
-                    message,
-                    tags,
-                    priority
-                );
-                
-                // Reset form
-                form.reset();
-                document.getElementById('charCounter').textContent = '0/1000 karakter';
-                
-                // Reset button
-                submitBtn.innerHTML = originalHtml;
-                submitBtn.disabled = false;
-                
-                // Tutup modal
-                document.getElementById('modalOverlay').classList.remove('show');
-                
-                // Tampilkan sukses
-                alert(`✅ BERHASIL! Aspirasi terkirim!\n\nKode Tiket: ${ticketCode}\n\nSimpan kode ini untuk cek status.`);
-                
-                console.log('Aspirasi berhasil disimpan:', ticketCode);
-            }, 800);
-        });
-    }
-    
-    // Event listener untuk cek status
-    document.getElementById('checkStatusBtn')?.addEventListener('click', function() {
-        const ticketCode = document.getElementById('ticketCode')?.value.trim().toUpperCase() || '';
-        
-        if (!ticketCode) {
-            alert('Masukkan kode tiket terlebih dahulu');
-            return;
-        }
-        
-        // Cari data
-        const submission = submissions.find(s => s.id === ticketCode);
-        
-        if (submission) {
-            const statusText = submission.status === 'received' ? '📥 Diterima' :
-                              submission.status === 'processed' ? '🔄 Diproses' : '✅ Selesai';
-            
-            alert(`Status Tiket ${ticketCode}:\n\n` +
-                  `Jenis: ${submission.type === 'aspiration' ? 'Aspirasi' : 'Kritik'}\n` +
-                  `Status: ${statusText}\n` +
-                  `Tanggal: ${submission.date}\n` +
-                  `Prioritas: ${submission.priority}\n\n` +
-                  (submission.reply ? `Balasan OSIS:\n"${submission.reply}"` : 'Belum ada balasan'));
-        } else {
-            alert('❌ Kode tiket tidak ditemukan. Pastikan kode benar.');
-        }
-    });
-    
-    // Event listener untuk filter
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            const filter = this.dataset.filter;
-            renderHistory(filter);
-        });
-    });
-    
-    // Tambah data contoh jika kosong
-    if (submissions.length === 0) {
-        console.log('Menambahkan data contoh...');
-        
-        // Tambah beberapa data contoh
-        addNewSubmission(
-            'aspiration',
-            'kegiatan',
-            'Saya usulkan ada kegiatan class meeting sebelum ujian akhir semester untuk refreshing. Bisa berupa lomba-lomba antar kelas yang ringan dan menyenangkan.',
-            ['class meeting', 'lomba', 'refresh'],
-            'medium'
-        );
-        
-        addNewSubmission(
-            'critique',
-            'fasilitas',
-            'Toilet di lantai 3 sangat bau dan sering kekurangan sabun. Mohon diperhatikan kebersihannya karena banyak siswa yang mengeluh.',
-            ['toilet', 'kebersihan'],
-            'high'
-        );
-        
-        console.log('Data contoh ditambahkan');
-    }
-    
-    // Real-time simulation (optional)
-    setInterval(() => {
-        const indicator = document.getElementById('realtimeIndicator');
-        if (indicator) {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('id-ID', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            indicator.querySelector('span').textContent = `Live Update: ${timeStr}`;
-        }
-    }, 1000);
-    
-    console.log('SuaraOSIS siap digunakan! Total data:', submissions.length);
-});
-</script>
-   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script>
-  const supabaseUrl = "https://xclmblovdjzegqksrkig.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjbG1ibG92ZGp6ZWdxa3Nya2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MjMyMDMsImV4cCI6MjA4NDA5OTIwM30.V58vIrPAm4bhPfB00UI-g4-ucFMyq3DOe8gEc57PFPg"
-
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-    acync function kiriaspirasi() {
-        const pesan = await   supabaseclient 
-        .from("aspirasi")
-        .insert([{pesan{}]);
-
-        console.log(data error);
-
-        if (error) {
-            alert("ERROR: " + error.message);
-        } else {
-            alert("MASUK ✅");
-        }
-    }
-</script>
 </body>
 </html>
