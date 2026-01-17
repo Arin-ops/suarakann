@@ -1,39 +1,322 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuaraOSIS - Platform Aspirasi Siswa</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --osis-blue: #1e3a8a;
-            --osis-blue-light: #3b82f6;
-            --osis-blue-dark: #1e40af;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #dc2626;
-            --purple: #8b5cf6;
-            --white: #ffffff;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
-            --radius: 10px;
-            --radius-lg: 16px;
-            --transition: all 0.3s ease;
-            --gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+<!doctype html>
+<html lang="id" class="scroll-smooth"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>VoiceSphere | Anonymous Governance Platform</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> 
+  <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 600: '#1A56DB', 700: '#1e40af', 800: '#1e3a8a', 900: '#172554' },
+                        dark: { bg: '#0F172A', card: '#1E293B', border: '#334155' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
         }
+    </script> 
+  <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            transition: background-color 0.3s ease; 
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        .dark .glass-effect {
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .step-line { position: relative; }
+        .step-line::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 2px; background: #E2E8F0;
+            z-index: 0;
+        }
+        .dark .step-line::after { background: #334155; }
+        
+        .menu-slide {
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .menu-slide.active {
+            transform: translateX(0);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(26, 86, 219, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(26, 86, 219, 0); }
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+    </style> 
+ </head> 
+ <body class="bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-slate-100"> 
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBcQNA82YJdc5dBSu2u26ZEAdkPjC0ZXD0",
+      authDomain: "suarakita-da4aa.firebaseapp.com",
+      projectId: "suarakita-da4aa",
+      storageBucket: "suarakita-da4aa.firebasestorage.app",
+      messagingSenderId: "700457706038",
+      appId: "1:700457706038:web:a47d94dbd81ad602feee97",
+      measurementId: "G-5QMFD4PZ19"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Global Handlers for Firebase
+    window.handleSubmit = async (event) => {
+        event.preventDefault();
+        const btn = event.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerText;
+        
+        btn.disabled = true;
+        btn.innerText = "MENGIRIM...";
+
+        const kategori = event.target.querySelector('select').value;
+        const urgensi = event.target.querySelector('input[name="urg"]:checked').parentElement.innerText.trim();
+        const pesan = event.target.querySelector('textarea').value;
+        const token = generateToken();
+
+        try {
+            await setDoc(doc(db, "laporan", token), {
+                kategori,
+                urgensi,
+                pesan,
+                status: "Diproses",
+                tanggapan: "",
+                createdAt: serverTimestamp()
+            });
+            
+            closeModal();
+            openTokenModal();
+            document.getElementById('generatedToken').textContent = token;
+            window.currentToken = token;
+            event.target.reset();
+        } catch (e) {
+            alert("Gagal mengirim laporan. Periksa koneksi atau Firebase Rules Anda.");
+            console.error(e);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    };
+
+    window.checkToken = async () => {
+        const input = document.getElementById('tokenInput').value.trim();
+        const statusDiv = document.getElementById('tokenStatus');
+        
+        if (!input) {
+            statusDiv.innerHTML = '<div class="bg-red-50 dark:bg-red-900/20 text-red-600 p-3 rounded-lg text-xs">Masukkan token!</div>';
+            statusDiv.classList.remove('hidden');
+            return;
+        }
+
+        statusDiv.innerHTML = '<p class="text-xs animate-pulse p-3">Mengecek basis data...</p>';
+        statusDiv.classList.remove('hidden');
+
+        try {
+            const docRef = doc(db, "laporan", input);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const colors = { "Diproses": "blue", "Diterima": "emerald", "Selesai": "green" };
+                const color = colors[data.status] || "slate";
+                
+                statusDiv.innerHTML = `
+                    <div class="bg-${color}-50 dark:bg-${color}-900/20 text-${color}-600 dark:text-${color}-400 p-4 rounded-xl border border-${color}-100 dark:border-${color}-800">
+                        <p class="font-bold text-sm">Status: ${data.status}</p>
+                        <p class="text-xs mt-1 leading-relaxed">${data.tanggapan || "Laporan sedang menunggu antrean tinjauan admin."}</p>
+                        <p class="text-[9px] mt-2 opacity-60 font-mono">${input}</p>
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = '<div class="bg-red-50 dark:bg-red-900/20 text-red-600 p-3 rounded-lg text-xs italic text-center">Token tidak valid atau tidak ditemukan.</div>';
+            }
+        } catch (e) {
+            statusDiv.innerHTML = '<div class="bg-red-50 text-red-600 p-3 rounded-lg text-xs">Error mengambil data.</div>';
+        }
+    };
+  </script>
+
+  <nav class="fixed top-0 w-full z-50 glass-effect border-b border-slate-200 dark:border-dark-border"> 
+   <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center"> 
+    <div class="flex items-center gap-3"> 
+     <div class="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200 dark:shadow-none"> <i class="fa-solid fa-shield-halved text-white text-sm"></i> 
+     </div> <span class="font-extrabold text-lg tracking-tight">VOICE<span class="text-brand-600">SPHERE</span></span> 
+    </div> 
+    <div class="flex items-center gap-4"> <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"> <i id="themeIcon" class="fa-solid fa-moon text-slate-500"></i> </button> <button onclick="openMenu()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"> <i class="fa-solid fa-bars text-slate-600 dark:text-slate-300"></i> </button> <button onclick="openModal()" class="hidden md:block bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow-md"> Buat Laporan </button> 
+    </div> 
+   </div> 
+  </nav>
+
+  <div id="sideMenu" class="menu-slide fixed inset-y-0 right-0 w-full md:w-96 z-[70] bg-white dark:bg-dark-card border-l border-slate-200 dark:border-dark-border overflow-y-auto"> 
+   <div class="p-6"> 
+    <div class="flex justify-between items-center mb-8"> 
+     <h2 class="text-xl font-black">Menu</h2> <button onclick="closeMenu()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"> <i class="fa-solid fa-xmark"></i> </button> 
+    </div>
+    <div class="mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl"> 
+     <h3 class="font-bold text-sm mb-3 flex items-center gap-2"> <i class="fa-solid fa-magnifying-glass text-brand-600"></i> Lacak Laporan Anda </h3> 
+     <div class="flex gap-2"> 
+      <input type="text" id="tokenInput" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-mono outline-none uppercase" placeholder="VS-XXXXXX"> <button onclick="checkToken()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 rounded-xl font-bold text-sm"> Lacak </button> 
+     </div> 
+     <div id="tokenStatus" class="mt-3 hidden p-3 rounded-lg text-sm"></div> 
+     <p class="text-xs text-slate-500 dark:text-slate-400 mt-2"> <i class="fa-solid fa-circle-info text-brand-600 mr-1"></i> Token diberikan saat submit laporan. </p> 
+    </div>
+    <div class="mb-8"> 
+     <h3 class="font-bold text-lg mb-4 flex items-center gap-2"> <i class="fa-solid fa-circle-question text-brand-600"></i> FAQ </h3> 
+     <div class="space-y-3"> 
+      <div class="accordion-item border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"> <button onclick="toggleAccordion(this)" class="w-full text-left p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800 transition"> <span class="font-medium text-sm">Bagaimana sistem menjaga anonimitas?</span> <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i> </button> 
+       <div class="accordion-content"> <div class="p-4 pt-0 border-t border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400"> Kami tidak menyimpan IP, email, atau metadata perangkat. </div> </div> 
+      </div> 
+     </div> 
+    </div>
+   </div> 
+  </div> 
+
+  <div id="menuOverlay" class="hidden fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm" onclick="closeMenu()"></div> 
+
+  <header class="pt-32 pb-16 px-6 text-center max-w-4xl mx-auto"> 
+   <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-brand-100 dark:border-brand-800"> <span class="w-2 h-2 bg-brand-600 rounded-full animate-pulse"></span> Portal Resmi Aspirasi Siswa 
+   </div> 
+   <h1 class="text-4xl md:text-6xl font-black tracking-tight mb-6">Suara Anda, Keamanan <span class="text-brand-600">Kami.</span></h1> 
+   <p class="text-slate-500 dark:text-slate-400 text-lg leading-relaxed mb-10">Sampaikan aspirasi atau kritik secara 100% anonim. <strong class="text-brand-600">Tanpa jejak digital.</strong></p> 
+  </header> 
+
+  <main class="max-w-5xl mx-auto px-6 pb-24 grid grid-cols-1 lg:grid-cols-3 gap-10"> 
+   <div class="lg:col-span-1 space-y-6"> 
+    <div class="bg-white dark:bg-dark-card p-6 rounded-3xl border border-slate-200 dark:border-dark-border shadow-sm"> 
+     <h3 class="font-bold text-sm mb-4 uppercase tracking-widest text-slate-400">Panel Kendali</h3> <button onclick="openModal()" class="w-full flex items-center justify-between p-4 mb-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition group"> Kirim Pesan Baru <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition"></i> </button> <button onclick="openMenu()" class="w-full p-4 border border-slate-200 dark:border-dark-border rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm"> <i class="fa-solid fa-bars mr-2"></i> Lacak Laporan </button> 
+    </div> 
+   </div> 
+
+   <div class="lg:col-span-2 space-y-8"> 
+    <h3 class="text-xl font-black italic">Informasi Keamanan</h3> 
+    <div class="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border overflow-hidden p-8"> 
+      <div class="flex items-start gap-4 mb-6">
+        <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+          <i class="fa-solid fa-fingerprint text-xl"></i>
+        </div>
+        <div>
+          <h4 class="font-bold text-lg">Zero Metadata Policy</h4>
+          <p class="text-sm text-slate-500 leading-relaxed">Sistem kami otomatis menghapus metadata dari setiap pesan yang masuk. Bahkan admin kami tidak tahu siapa Anda.</p>
+        </div>
+      </div>
+    </div> 
+   </div> 
+  </main> 
+
+  <div id="modalForm" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"> 
+   <div class="bg-white dark:bg-dark-card w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border dark:border-dark-border"> 
+    <div class="p-8"> 
+     <div class="flex justify-between items-center mb-6"> 
+      <h3 class="text-2xl font-black tracking-tight">Kirim Laporan</h3> <button onclick="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"> <i class="fa-solid fa-xmark"></i> </button> 
+     </div> 
+     <form class="space-y-5" onsubmit="handleSubmit(event)"> 
+      <div> <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Kategori</label> <select class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-sm font-medium focus:ring-2 ring-brand-600 outline-none"> <option>Fasilitas Sekolah</option> <option>Kebijakan / Aturan</option> <option>Layanan Guru/Staf</option> <option>Lainnya</option> </select> 
+      </div> 
+      <div> <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Urgensi</label> 
+       <div class="flex gap-2"> 
+        <label class="flex-1 cursor-pointer"> <input type="radio" name="urg" class="hidden peer" checked> <div class="py-3 border dark:border-slate-700 rounded-xl text-center peer-checked:bg-brand-600 peer-checked:text-white transition text-[10px] font-bold uppercase"> Rendah </div> </label> 
+        <label class="flex-1 cursor-pointer"> <input type="radio" name="urg" class="hidden peer"> <div class="py-3 border dark:border-slate-700 rounded-xl text-center peer-checked:bg-orange-500 peer-checked:text-white transition text-[10px] font-bold uppercase"> Sedang </div> </label> 
+        <label class="flex-1 cursor-pointer"> <input type="radio" name="urg" class="hidden peer"> <div class="py-3 border dark:border-slate-700 rounded-xl text-center peer-checked:bg-red-600 peer-checked:text-white transition text-[10px] font-bold uppercase"> Tinggi </div> </label> 
+       </div> 
+      </div> 
+      <div> <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Pesan Anda</label> <textarea rows="4" class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-sm font-medium focus:ring-2 ring-brand-600 outline-none" placeholder="Tulis aspirasi Anda..." required></textarea> 
+      </div> 
+      <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-4 rounded-2xl shadow-xl transition transform active:scale-[0.98]"> KIRIM ANONIM </button> 
+     </form> 
+    </div> 
+   </div> 
+  </div> 
+
+  <div id="tokenModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"> 
+   <div class="bg-white dark:bg-dark-card w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border dark:border-dark-border"> 
+    <div class="p-8 text-center"> 
+     <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center mx-auto mb-6"> <i class="fa-solid fa-key text-emerald-600 text-2xl"></i> 
+     </div> 
+     <h3 class="text-xl font-black mb-2">Laporan Terkirim!</h3> 
+     <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Simpan token ini untuk melacak status laporan</p> 
+     <div class="mb-6"> 
+      <div class="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl border-2 border-emerald-200"> 
+       <p class="text-2xl font-mono font-black text-emerald-600 pulse-glow" id="generatedToken"></p> 
+      </div> 
+     </div> 
+     <button onclick="copyToken()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl mb-3">Salin Token</button> 
+     <button onclick="closeTokenModal()" class="w-full border border-slate-200 dark:border-slate-700 py-3 rounded-xl">Tutup</button> 
+    </div> 
+   </div> 
+  </div> 
+
+  <script>
+    window.currentToken = '';
+    
+    function toggleDarkMode() {
+        document.documentElement.classList.toggle('dark');
+        const icon = document.getElementById('themeIcon');
+        icon.className = document.documentElement.classList.contains('dark') ? 'fa-solid fa-sun text-brand-400' : 'fa-solid fa-moon text-slate-500';
+    }
+
+    function openMenu() { document.getElementById('sideMenu').classList.add('active'); document.getElementById('menuOverlay').classList.remove('hidden'); }
+    function closeMenu() { document.getElementById('sideMenu').classList.remove('active'); document.getElementById('menuOverlay').classList.add('hidden'); }
+    function openModal() { document.getElementById('modalForm').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('modalForm').classList.add('hidden'); }
+    function openTokenModal() { document.getElementById('tokenModal').classList.remove('hidden'); }
+    function closeTokenModal() { document.getElementById('tokenModal').classList.add('hidden'); }
+
+    function generateToken() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let res = 'VS-';
+        for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+        return res;
+    }
+
+    function copyToken() {
+        const text = document.getElementById('generatedToken').innerText;
+        navigator.clipboard.writeText(text).then(() => { alert("Token berhasil disalin!"); });
+    }
+
+    function toggleAccordion(button) {
+        const content = button.nextElementSibling;
+        content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
+    }
+
+    window.onclick = (e) => {
+        if (e.target.id === 'modalForm') closeModal();
+        if (e.target.id === 'tokenModal') closeTokenModal();
+    }
+  </script> 
+ </body>
+</html>
 
         .dark-mode {
             --osis-blue: #3b82f6;
